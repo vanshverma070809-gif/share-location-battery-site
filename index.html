@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>View Image</title>
+<style>
+body{margin:0;background:#111;color:#fff;font-family:Arial,sans-serif;display:flex;justify-content:center;min-height:100vh}
+.card{width:min(92%,430px);margin:35px auto;text-align:center}
+img{width:100%;border-radius:18px;display:block;margin-bottom:18px}
+button{width:100%;padding:14px;border:0;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer}
+.notice{background:#222;padding:14px;border-radius:12px;text-align:left;font-size:14px;line-height:1.5;margin:15px 0}
+#status{margin-top:15px;padding:12px;border-radius:10px;background:#222;display:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <img src="https://placehold.co/800x1000/png?text=Your+Image" alt="Image">
+  <div class="notice">
+    <b>Location sharing</b><br>
+    If you choose to share, your current location will be sent to the page owner.
+  </div>
+  <button id="share">📍 Share my location</button>
+  <div id="status"></div>
+</div>
+
+<script>
+const statusBox = document.getElementById("status");
+const button = document.getElementById("share");
+
+button.onclick = () => {
+  if (!navigator.geolocation) {
+    statusBox.style.display = "block";
+    statusBox.textContent = "Location is not supported by this browser.";
+    return;
+  }
+
+  statusBox.style.display = "block";
+  statusBox.textContent = "Requesting permission…";
+
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const payload = {
+      latitude: pos.coords.latitude,
+      longitude: pos.coords.longitude,
+      accuracy: pos.coords.accuracy,
+      sharedAt: new Date().toISOString()
+    };
+
+    try {
+      const res = await fetch("/api/location", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error();
+      statusBox.textContent = "Location shared successfully.";
+    } catch {
+      statusBox.textContent = "Could not send the location. Please try again.";
+    }
+  }, () => {
+    statusBox.textContent = "Location permission was denied or unavailable.";
+  }, {enableHighAccuracy:true, timeout:10000, maximumAge:0});
+};
+</script>
+</body>
+</html>
