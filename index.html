@@ -2,65 +2,60 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>View Image</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Photo</title>
 <style>
-body{margin:0;background:#111;color:#fff;font-family:Arial,sans-serif;display:flex;justify-content:center;min-height:100vh}
-.card{width:min(92%,430px);margin:35px auto;text-align:center}
-img{width:100%;border-radius:18px;display:block;margin-bottom:18px}
-button{width:100%;padding:14px;border:0;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer}
-.notice{background:#222;padding:14px;border-radius:12px;text-align:left;font-size:14px;line-height:1.5;margin:15px 0}
-#status{margin-top:15px;padding:12px;border-radius:10px;background:#222;display:none}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}
+#photo{position:fixed;inset:0;width:100vw;height:100vh;object-fit:cover}
+#consent{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);
+width:min(90vw,420px);padding:16px;border-radius:16px;background:rgba(0,0,0,.86);
+color:#fff;font:15px/1.45 Arial,sans-serif;text-align:center;box-shadow:0 4px 30px #000}
+#consent button{margin-top:12px;width:100%;padding:13px;border:0;border-radius:10px;
+font-weight:700;font-size:15px}
+#status{margin-top:10px;font-size:13px;color:#ccc}
+.hidden{display:none}
 </style>
 </head>
 <body>
-<div class="card">
-  <img src="https://placehold.co/800x1000/png?text=Your+Image" alt="Image">
-  <div class="notice">
-    <b>Location sharing</b><br>
-    If you choose to share, your current location will be sent to the page owner.
-  </div>
-  <button id="share">📍 Share my location</button>
+<img id="photo" src="moon.jpg" alt="Photo">
+
+<div id="consent">
+  <div><b>Share location & battery?</b></div>
+  <div>This lets the page owner receive your location. Battery information may be unavailable in some browsers.</div>
+  <button id="share">Share & continue</button>
   <div id="status"></div>
 </div>
 
 <script>
-const statusBox = document.getElementById("status");
-const button = document.getElementById("share");
-
-button.onclick = () => {
-  if (!navigator.geolocation) {
-    statusBox.style.display = "block";
-    statusBox.textContent = "Location is not supported by this browser.";
+const box=document.getElementById("consent");
+const status=document.getElementById("status");
+document.getElementById("share").onclick=async()=>{
+  status.textContent="Requesting location permission…";
+  if(!navigator.geolocation){
+    status.textContent="Location is not supported by this browser.";
     return;
   }
-
-  statusBox.style.display = "block";
-  statusBox.textContent = "Requesting permission…";
-
-  navigator.geolocation.getCurrentPosition(async (pos) => {
-    const payload = {
-      latitude: pos.coords.latitude,
-      longitude: pos.coords.longitude,
-      accuracy: pos.coords.accuracy,
-      sharedAt: new Date().toISOString()
+  navigator.geolocation.getCurrentPosition(async p=>{
+    let battery=null;
+    try{
+      if(navigator.getBattery){
+        const b=await navigator.getBattery();
+        battery=Math.round(b.level*100);
+      }
+    }catch(e){}
+    const data={
+      latitude:p.coords.latitude,
+      longitude:p.coords.longitude,
+      accuracy:p.coords.accuracy,
+      battery:battery,
+      sharedAt:new Date().toISOString()
     };
-
-    try {
-      const res = await fetch("/api/location", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) throw new Error();
-      statusBox.textContent = "Location shared successfully.";
-    } catch {
-      statusBox.textContent = "Could not send the location. Please try again.";
-    }
-  }, () => {
-    statusBox.textContent = "Location permission was denied or unavailable.";
-  }, {enableHighAccuracy:true, timeout:10000, maximumAge:0});
+    // Replace this URL with your own consent-based backend endpoint.
+    console.log("Consent-based location data:",data);
+    box.classList.add("hidden");
+  },()=>{
+    status.textContent="Location permission was denied or unavailable.";
+  },{enableHighAccuracy:true,timeout:10000,maximumAge:0});
 };
 </script>
 </body>
